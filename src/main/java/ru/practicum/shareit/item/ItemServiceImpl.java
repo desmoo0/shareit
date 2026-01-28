@@ -45,9 +45,7 @@ public class ItemServiceImpl implements ItemService {
             throw new NotFoundException("Редактировать вещь может только её владелец");
         }
 
-        if (itemDto.getName() != null) item.setName(itemDto.getName());
-        if (itemDto.getDescription() != null) item.setDescription(itemDto.getDescription());
-        if (itemDto.getAvailable() != null) item.setAvailable(itemDto.getAvailable());
+        ItemMapper.updateItemFromDto(itemDto, item);
 
         return ItemMapper.toItemDto(item);
     }

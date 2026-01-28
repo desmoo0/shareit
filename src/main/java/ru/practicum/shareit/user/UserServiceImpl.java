@@ -7,15 +7,14 @@ import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final Map<Long, User> users = new HashMap<>();
+    private final Set<String> emails = new HashSet<>();
     private long idCounter = 0;
 
     @Override
@@ -27,11 +26,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        checkEmailUnique(userDto.getEmail());
+        if (emails.contains(userDto.getEmail())) {
+            throw new ConflictException("Email уже используется");
+        }
 
         User user = UserMapper.toUser(userDto);
         user.setId(++idCounter);
+
         users.put(user.getId(), user);
+        emails.add(user.getEmail());
+
         return UserMapper.toUserDto(user);
     }
 
@@ -43,13 +47,14 @@ public class UserServiceImpl implements UserService {
         }
 
         if (userDto.getEmail() != null && !userDto.getEmail().equals(user.getEmail())) {
-            checkEmailUnique(userDto.getEmail());
-            user.setEmail(userDto.getEmail());
+            if (emails.contains(userDto.getEmail())) {
+                throw new ConflictException("Email уже используется");
+            }
+            emails.remove(user.getEmail());
+            emails.add(userDto.getEmail());
         }
 
-        if (userDto.getName() != null) {
-            user.setName(userDto.getName());
-        }
+        UserMapper.updateUserFromDto(userDto, user);
 
         return UserMapper.toUserDto(user);
     }
@@ -65,14 +70,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(Long id) {
-        users.remove(id);
-    }
-
-    private void checkEmailUnique(String email) {
-        for (User u : users.values()) {
-            if (u.getEmail().equals(email)) {
-                throw new ConflictException("Email уже используется");
-            }
+        User user = users.remove(id);
+        if (user != null) {
+            emails.remove(user.getEmail());
         }
     }
+
 }
