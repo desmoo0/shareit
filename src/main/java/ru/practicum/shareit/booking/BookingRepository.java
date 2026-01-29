@@ -20,6 +20,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                 @Param("itemId") Long itemId,
                                 @Param("now") LocalDateTime now,
                                 @Param("status") BookingStatus status);
+
     @Query("select b from Booking b " +
             "where b.booker.id = ?1 " +
             "and b.start < ?2 " +
