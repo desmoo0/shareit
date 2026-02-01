@@ -34,6 +34,8 @@ public class ItemServiceImpl implements ItemService {
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
 
+    private final BookingMapper bookingMapper;
+
     @Override
     @Transactional
     public ItemDto addItem(Long userId, ItemDto itemDto) {
@@ -64,7 +66,6 @@ public class ItemServiceImpl implements ItemService {
         BookingDto lastBooking = null;
         BookingDto nextBooking = null;
 
-        // Если запрашивает владелец, подтягиваем бронирования
         if (item.getOwner().getId().equals(userId)) {
             List<Booking> bookings = bookingRepository.findAllByItemIdAndStatus(itemId, BookingStatus.APPROVED);
             LocalDateTime now = LocalDateTime.now();
@@ -95,19 +96,15 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDto> getUserItems(Long userId) {
-        // 1. Получаем все вещи пользователя
         List<Item> items = itemRepository.findAllByOwnerId(userId);
         if (items.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Long> itemIds = items.stream().map(Item::getId).collect(Collectors.toList());
-
-        // 2. Пакетно загружаем бронирования и комментарии (решение проблемы N+1)
         List<Booking> allBookings = bookingRepository.findAllApprovedByItemIds(itemIds);
         List<Comment> allComments = commentRepository.findAllByItemIdIn(itemIds);
 
-        // 3. Группируем их по itemId
         Map<Long, List<Booking>> bookingsByItem = allBookings.stream()
                 .collect(Collectors.groupingBy(b -> b.getItem().getId()));
 
@@ -117,7 +114,6 @@ public class ItemServiceImpl implements ItemService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 4. Собираем DTO
         return items.stream().map(item -> {
             List<Booking> itemBookings = bookingsByItem.getOrDefault(item.getId(), Collections.emptyList());
 
@@ -152,7 +148,6 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Вещь не найдена"));
 
-        // Исправленный вызов: передаем статус APPROVED явно
         if (!bookingRepository.hasCompletedBooking(userId, itemId, LocalDateTime.now(), BookingStatus.APPROVED)) {
             throw new ValidationException("Отзыв можно оставить только после состоявшегося бронирования");
         }
@@ -161,20 +156,19 @@ public class ItemServiceImpl implements ItemService {
         return CommentMapper.toCommentDto(commentRepository.save(comment));
     }
 
-    // Вспомогательные методы для поиска Last/Next
     private BookingDto getLastBooking(List<Booking> bookings, LocalDateTime now) {
         return bookings.stream()
-                .filter(b -> !b.getStart().isAfter(now)) // start <= now
+                .filter(b -> !b.getStart().isAfter(now))
                 .max(Comparator.comparing(Booking::getStart))
-                .map(BookingMapper::toBookingDto)
+                .map(bookingMapper::toBookingDto)
                 .orElse(null);
     }
 
     private BookingDto getNextBooking(List<Booking> bookings, LocalDateTime now) {
         return bookings.stream()
-                .filter(b -> b.getStart().isAfter(now)) // start > now
+                .filter(b -> b.getStart().isAfter(now))
                 .min(Comparator.comparing(Booking::getStart))
-                .map(BookingMapper::toBookingDto)
+                .map(bookingMapper::toBookingDto)
                 .orElse(null);
     }
 }

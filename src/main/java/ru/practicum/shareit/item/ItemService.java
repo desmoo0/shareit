@@ -1,6 +1,5 @@
 package ru.practicum.shareit.item;
 
-import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 
@@ -19,6 +18,5 @@ public interface ItemService {
 
     List<ItemDto> searchItems(String text);
 
-    @Transactional
     CommentDto addComment(Long userId, Long itemId, CommentDto commentDto);
 }
