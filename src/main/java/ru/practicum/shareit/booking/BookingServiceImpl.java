@@ -31,9 +31,7 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final BookingMapper bookingMapper;
-
     private final List<BookingStrategy> strategies;
-
     private Map<BookingState, BookingStrategy> strategyMap;
 
     @PostConstruct
@@ -55,8 +53,12 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateBookingCreation(Item item, BookingDto bookingDto, Long userId) {
-        if (!item.getAvailable()) { throw new ValidationException("Вещь недоступна для бронирования"); }
-        if (item.getOwner().getId().equals(userId)) { throw new NotFoundException("Владелец не может бронировать свою вещь"); }
+        if (!item.getAvailable()) {
+            throw new ValidationException("Вещь недоступна для бронирования");
+        }
+        if (item.getOwner().getId().equals(userId)) {
+            throw new NotFoundException("Владелец не может бронировать свою вещь");
+        }
         if (bookingDto.getStart().isAfter(bookingDto.getEnd()) || bookingDto.getStart().equals(bookingDto.getEnd())) {
             throw new ValidationException("Некорректные даты бронирования");
         }
